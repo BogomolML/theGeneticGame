@@ -3,8 +3,10 @@ from shutil import rmtree
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
+
 from logic.populationClass import Population
 from logic.agentClass import Agent
+from logic.config import Config
 
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -104,8 +106,8 @@ class GeneticGameVisualizr:
     def plot_agent_trajectory(self, agent: Agent, generation: int):
         plt.figure(figsize=(8, 8))
 
-        agent.coord = [0, 0]
-        trajectory = [[0, 0]]
+        agent.coord = Config.START_COORD
+        trajectory = [Config.START_COORD]
 
         for move in agent.dnk:
             new_x, new_y = agent.coord[0], agent.coord[1]
