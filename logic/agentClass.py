@@ -18,9 +18,21 @@ class Agent:
     def __setitem__(self, key, value):
         self._dnk[key] = value
 
+    @property
+    def dnk(self):
+        return self._dnk
+
+    @property
+    def coord(self):
+        return self._coord
+
+    @coord.setter
+    def coord(self, value):
+        self._coord = value
+
     def _move(self):
         for move in self._dnk:
-            new_x, new_y = self._coord[0], self._coord[1]
+            new_x, new_y = self.coord[0], self.coord[1]
 
             match move:
                 case 'right': new_x += 1
@@ -29,18 +41,18 @@ class Agent:
                 case 'down': new_y -= 1
 
             if 0 <= new_x < self._env_size:
-                self._coord[0] = new_x
+                self.coord[0] = new_x
             if 0 <= new_y < self._env_size:
-                self._coord[1] = new_y
+                self.coord[1] = new_y
 
     def simulate(self, test=False) -> float:
         hypotenuse = lambda k1, k2: np.sqrt(k1**2 + k2**2)
-        self._coord = [0, 0]
+        self.coord = [0, 0]
         self._move()
         x, y = self._goal
 
-        leg1 = abs(self._goal[0] - self._coord[0])
-        leg2 = abs(self._goal[1] - self._coord[1])
+        leg1 = abs(self._goal[0] - self.coord[0])
+        leg2 = abs(self._goal[1] - self.coord[1])
         dist_to_goal = hypotenuse(leg1, leg2)
         if test: dist_to_goal = 0
         max_distance = hypotenuse(max(x, self._env_size - x), max(y, self._env_size - y))

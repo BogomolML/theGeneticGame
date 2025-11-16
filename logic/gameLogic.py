@@ -1,13 +1,14 @@
 from random import choices, randint, random
-from token import MINUS
 
 from agentClass import Agent
 from populationClass import Population
 
+from visualize.classVisualizer import GeneticGameVisualizr
 
-'''Consts'''
+
+# ============= CONFIG =============
 MOVES = ['up', 'down', 'left', 'right']
-MAX_GENERATIONS = 1000
+MAX_GENERATIONS = 250
 ENV_SIZE = 50
 AGENTS_CNT = 100
 DNK_CNT = 200
@@ -19,6 +20,7 @@ ELITE_CNT = int(PARENTS_CNT * ELITE_PERSENT)
 BASE_MUTATION_RATE = 0.03
 GOAL = (randint(0, ENV_SIZE), randint(0, ENV_SIZE))
 FREQUENCY_SAVE = 50
+# ==================================
 
 
 def create_first_population(p: Population):
@@ -56,19 +58,31 @@ def create_new_population(p: Population, parents: list, gen):
 
 
 if __name__ == '__main__':
+    visualizer = GeneticGameVisualizr(ENV_SIZE, GOAL)
+
     population = Population()
     create_first_population(population)
     test = Agent([0] * DNK_CNT, ENV_SIZE, GOAL, FINE)
-
-    print('goal', GOAL)
-    print('best fit', test.simulate(test=True))
-    print('worse agent, first pop', min(population.evaluate_all(), key=lambda f: f[0])[0])
-    print('best agent, first pop', max(population.evaluate_all(), key=lambda f: f[0])[0])
+    fitness_history = []
+    best_agents_history = []
+    initial_population = None
 
     for g in range(MAX_GENERATIONS):
         fitness_agents = population.evaluate_all()
+        fitness_scores = [fitness for fitness, _ in fitness_agents]
+        fitness_history.append(fitness_scores)
+
+        if g == 0:
+            initial_population = population.population.copy()
+
+        if g % FREQUENCY_SAVE == 0:
+            visualizer.plot_generation_snapshot(population, g)
+
+            best_agent = fitness_agents[0][1]
+            visualizer.plot_agent_trajectory(best_agent, g)
+
         best_agents = [agent for fitness, agent in fitness_agents[:PARENTS_CNT]]
         create_new_population(population, best_agents, g)
 
-    print('worse agent, last pop', min(population.evaluate_all(), key=lambda f: f[0])[0])
-    print('best agent, last pop', max(population.evaluate_all(), key=lambda f: f[0])[0])
+    visualizer.plot_fitness_evolution(fitness_history)
+    visualizer.plot_comparison(initial_population, population)
