@@ -4,6 +4,7 @@ import numpy as np
 class Agent:
     def __init__(self, dnk: list, coord: list, env_size: int, goal: tuple, fine: float):
         self._dnk = np.array(dnk)
+        self._start_coord = coord
         self._coord = coord
         self._goal = goal
         self._env_size = env_size
@@ -24,15 +25,15 @@ class Agent:
 
     @property
     def coord(self):
-        return self._coord
+        return self._start_coord
 
     @coord.setter
     def coord(self, value):
-        self._coord = value
+        self._start_coord = value
 
     def _move(self):
         for move in self._dnk:
-            new_x, new_y = self.coord[0], self.coord[1]
+            new_x, new_y = self._coord[0], self._coord[1]
 
             match move:
                 case 'right': new_x += 1
@@ -41,13 +42,13 @@ class Agent:
                 case 'down': new_y -= 1
 
             if 0 <= new_x < self._env_size:
-                self.coord[0] = new_x
+                self._coord[0] = new_x
             if 0 <= new_y < self._env_size:
-                self.coord[1] = new_y
+                self._coord[1] = new_y
 
     def simulate(self) -> float:
         hypotenuse = lambda k1, k2: np.sqrt(k1**2 + k2**2)
-        self.coord = [0, 0]
+        self._coord = self._start_coord
         self._move()
         x, y = self._goal
 
