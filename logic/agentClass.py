@@ -2,9 +2,9 @@ import numpy as np
 
 
 class Agent:
-    def __init__(self, dnk: list, env_size: int, goal: tuple, fine: float):
+    def __init__(self, dnk: list, coord: list, env_size: int, goal: tuple, fine: float):
         self._dnk = np.array(dnk)
-        self._coord = [0, 0]
+        self._coord = coord
         self._goal = goal
         self._env_size = env_size
         self._fine = fine
@@ -45,7 +45,7 @@ class Agent:
             if 0 <= new_y < self._env_size:
                 self.coord[1] = new_y
 
-    def simulate(self, test=False) -> float:
+    def simulate(self) -> float:
         hypotenuse = lambda k1, k2: np.sqrt(k1**2 + k2**2)
         self.coord = [0, 0]
         self._move()
@@ -54,7 +54,6 @@ class Agent:
         leg1 = abs(self._goal[0] - self.coord[0])
         leg2 = abs(self._goal[1] - self.coord[1])
         dist_to_goal = hypotenuse(leg1, leg2)
-        if test: dist_to_goal = 0
         max_distance = hypotenuse(max(x, self._env_size - x), max(y, self._env_size - y))
 
         fitness = self.fitness(dist_to_goal, max_distance)

@@ -1,13 +1,30 @@
+import os
+from shutil import rmtree
+from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 from logic.populationClass import Population
 from logic.agentClass import Agent
+
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "plots")
+
+def ensure_plots_dir():
+    if not os.path.exists(PLOTS_DIR):
+        os.makedirs(PLOTS_DIR)
 
 class GeneticGameVisualizr:
     def __init__(self, env_size: int, goal: tuple):
         self._env_size = env_size
         self._goal = goal
         self._fig = None
+
+        try:
+            rmtree(PLOTS_DIR)
+        except FileNotFoundError:
+            pass
+        ensure_plots_dir()
 
     @staticmethod
     def plot_fitness_evolution(fitness_history: list[list[float]]):
@@ -39,13 +56,9 @@ class GeneticGameVisualizr:
 
         plt.tight_layout()
 
-        print(f"═" * 50)
-        print(f"СТАТИСТИКА ЭВОЛЮЦИИ:")
-        print(f"Начальный лучший фитнес: {best_fitness[0]:.2f}")
-        print(f"Финальный лучший фитнес: {best_fitness[-1]:.2f}")
-        print(f"Улучшение: +{best_fitness[-1] - best_fitness[0]:.2f}")
-        print(f"Финальный разброс: {diversity[-1]:.2f}")
-        print(f"═" * 50)
+        filename = os.path.join(PLOTS_DIR, "fitness_evolution.png")
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"График сохранен: {filename}")
 
     def plot_generation_snapshot(self, population: Population, generation: int,
                                  top_n: int = 10):
@@ -83,6 +96,10 @@ class GeneticGameVisualizr:
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
+
+        filename = os.path.join(PLOTS_DIR, f"generation_{generation:04d}.png")
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"Снимок сохранен: {filename}")
 
     def plot_agent_trajectory(self, agent: Agent, generation: int):
         plt.figure(figsize=(8, 8))
@@ -131,6 +148,10 @@ class GeneticGameVisualizr:
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
 
+        filename = os.path.join(PLOTS_DIR, f"trajectory_gen_{generation:04d}.png")
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        print(f"Траектория сохранена: {filename}")
+
     def plot_comparison(self, initial_population: Population, final_population: Population):
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
@@ -157,3 +178,24 @@ class GeneticGameVisualizr:
             ax.grid(True, alpha=0.3)
 
         plt.tight_layout()
+
+    @staticmethod
+    def save_experiment_info(config, fitness_history):
+        info = f"""
+        ЭКСПЕРИМЕНТ ГЕНЕТИЧЕСКОГО АЛГОРИТМА
+        ====================================
+        Дата: {datetime.now().strftime("%Y-%m-%d %H:%M")}
+        Размер поля: {config.ENV_SIZE}
+        Размер популяции: {config.AGENTS_CNT}
+        Длина ДНК: {config.DNK_CNT}
+        Цель: {config.GOAL}
+        Мутация: {config.MUTATION_RATE}
+        Поколений: {len(fitness_history)}
+
+        РЕЗУЛЬТАТЫ:
+        Начальный лучший фитнес: {max(fitness_history[0]):.2f}
+        Финальный лучший фитнес: {max(fitness_history[-1]):.2f}
+        Улучшение: {max(fitness_history[-1]) - max(fitness_history[0]):.2f}
+        """
+        with open(f"{PLOTS_DIR}/experiment_info.txt", "w", encoding="utf-8") as f:
+            f.write(info)
