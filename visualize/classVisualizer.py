@@ -1,13 +1,31 @@
+import os
+from datetime import datetime
+from shutil import rmtree
+
 import matplotlib.pyplot as plt
 import numpy as np
-from logic.populationClass import Population
+
 from logic.agentClass import Agent
+from logic.config import Config
+from logic.populationClass import Population
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PLOTS_DIR = os.path.join(PROJECT_ROOT, "plots")
+
+def ensure_plots_dir():
+    if not os.path.exists(PLOTS_DIR):
+        os.makedirs(PLOTS_DIR)
 
 class GeneticGameVisualizr:
     def __init__(self, env_size: int, goal: tuple):
         self._env_size = env_size
         self._goal = goal
-        self._fig = None
+
+        try:
+            rmtree(PLOTS_DIR)
+        except FileNotFoundError:
+            pass
+        ensure_plots_dir()
 
     @staticmethod
     def plot_fitness_evolution(fitness_history: list[list[float]]):
@@ -39,44 +57,43 @@ class GeneticGameVisualizr:
 
         plt.tight_layout()
 
-        print(f"═" * 50)
-        print(f"СТАТИСТИКА ЭВОЛЮЦИИ:")
-        print(f"Начальный лучший фитнес: {best_fitness[0]:.2f}")
-        print(f"Финальный лучший фитнес: {best_fitness[-1]:.2f}")
-        print(f"Улучшение: +{best_fitness[-1] - best_fitness[0]:.2f}")
-        print(f"Финальный разброс: {diversity[-1]:.2f}")
-        print(f"═" * 50)
+        filename = os.path.join(PLOTS_DIR, "fitness_evolution.png")
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"График сохранен: {filename}")
 
     def plot_generation_snapshot(self, population: Population, generation: int,
                                  top_n: int = 10):
         plt.figure(figsize=(10, 10))
 
-        fitness_agents = population.evaluate_all()
-        top_agents = [agent for _, agent in fitness_agents[:top_n]]
-        other_agents = [agent for _, agent in fitness_agents[top_n:]]
+        fitness_coords = []
+        for agent in population.population:
+            fitness, _ = agent.simulate()
+            fitness_coords.append((fitness, agent, agent.coord.copy()))
 
-        other_coords = []
-        for agent in other_agents:
-            agent.simulate()
-            other_coords.append(agent.coord)
+        fitness_coords.sort(key=lambda x: x[0], reverse=True)
 
-        if other_coords:
-            other_coords = np.array(other_coords)
+        top_data = fitness_coords[:top_n]
+        other_data = fitness_coords[top_n:]
+
+        if other_data:
+            other_coords = np.array([coord for _, _, coord in other_data])
             plt.scatter(other_coords[:, 0], other_coords[:, 1],
-                        alpha=0.3, color='gray', label=f'Остальные агенты')
+                        alpha=0.3, color='gray', s=30, label='Остальные агенты')
 
-        colors = plt.cm.viridis(np.linspace(0, 1, top_n))
-        for i, agent in enumerate(top_agents):
-            agent.simulate()
-            plt.scatter(agent.coord[0], agent.coord[1],
-                        color=colors[i], s=80, label=f'Топ {i + 1}')
+        colors = plt.cm.viridis(np.linspace(0, 1, len(top_data)))
+        for i, (fitness, agent, coord) in enumerate(top_data):
+            plt.scatter(coord[0], coord[1],
+                        color=colors[i], s=100, edgecolors='black', linewidth=1,
+                        label=f'Топ {i + 1}: {fitness:.1f}')
 
-        plt.scatter(0, 0, color='green', s=150, marker='s', label='Старт', edgecolors='black')
+        plt.scatter(Config.START_COORD[0], Config.START_COORD[1], color='green', s=150,
+                    marker='s', label='Старт', edgecolors='black', zorder=5)
         plt.scatter(self._goal[0], self._goal[1], color='red', s=200,
-                    marker='*', label='Цель', edgecolors='black')
+                    marker='*', label='Цель', edgecolors='black', zorder=5)
 
-        plt.xlim(-2, self._env_size + 2)
-        plt.ylim(-2, self._env_size + 2)
+        plt.xlim(-1, self._env_size)
+        plt.ylim(-1, self._env_size)
         plt.xlabel('X координата')
         plt.ylabel('Y координата')
         plt.title(f'Поколение {generation}\nЦель: {self._goal}')
@@ -84,31 +101,15 @@ class GeneticGameVisualizr:
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
 
+        filename = os.path.join(PLOTS_DIR, f"generation_{generation:04d}.png")
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"Снимок сохранен: {filename}")
+
     def plot_agent_trajectory(self, agent: Agent, generation: int):
         plt.figure(figsize=(8, 8))
 
-        agent.coord = [0, 0]
-        trajectory = [[0, 0]]
-
-        for move in agent.dnk:
-            new_x, new_y = agent.coord[0], agent.coord[1]
-            match move:
-                case 'right':
-                    new_x += 1
-                case 'left':
-                    new_x -= 1
-                case 'up':
-                    new_y += 1
-                case 'down':
-                    new_y -= 1
-
-            if 0 <= new_x < self._env_size:
-                agent.coord[0] = new_x
-            if 0 <= new_y < self._env_size:
-                agent.coord[1] = new_y
-
-            trajectory.append([agent.coord[0], agent.coord[1]])
-
+        _, trajectory = agent.simulate()
         trajectory = np.array(trajectory)
 
         plt.plot(trajectory[:, 0], trajectory[:, 1], 'b-', alpha=0.5, linewidth=1)
@@ -130,6 +131,11 @@ class GeneticGameVisualizr:
         plt.legend()
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
+
+        filename = os.path.join(PLOTS_DIR, f"trajectory_gen_{generation:04d}.png")
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"Траектория сохранена: {filename}")
 
     def plot_comparison(self, initial_population: Population, final_population: Population):
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
@@ -157,3 +163,25 @@ class GeneticGameVisualizr:
             ax.grid(True, alpha=0.3)
 
         plt.tight_layout()
+        plt.close()
+
+    @staticmethod
+    def save_experiment_info(config, fitness_history):
+        info = f"""
+        ЭКСПЕРИМЕНТ ГЕНЕТИЧЕСКОГО АЛГОРИТМА
+        ====================================
+        Дата: {datetime.now().strftime("%Y-%m-%d %H:%M")}
+        Размер поля: {config.ENV_SIZE}
+        Размер популяции: {config.AGENTS_CNT}
+        Длина ДНК: {config.DNK_CNT}
+        Цель: {config.GOAL}
+        Мутация: {config.MUTATION_RATE}
+        Поколений: {len(fitness_history)}
+
+        РЕЗУЛЬТАТЫ:
+        Начальный лучший фитнес: {max(fitness_history[0]):.2f}
+        Финальный лучший фитнес: {max(fitness_history[-1]):.2f}
+        Улучшение: {max(fitness_history[-1]) - max(fitness_history[0]):.2f}
+        """
+        with open(f"{PLOTS_DIR}/experiment_info.txt", "w", encoding="utf-8") as f:
+            f.write(info)

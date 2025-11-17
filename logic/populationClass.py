@@ -1,3 +1,5 @@
+from logic.config import Config
+
 
 class Population:
     def __init__(self):
@@ -20,6 +22,7 @@ class Population:
     def evaluate_all(self) -> list:
         fitness_scores = []
         for agent in self._population:
-            fitness = agent.simulate()
+            fitness, _ = agent.simulate()
             fitness_scores.append((fitness, agent))
-        return sorted(fitness_scores, key=lambda f: f[0], reverse=True)
+        fitness_scores = sorted(fitness_scores, key=lambda f: f[0], reverse=True)
+        return fitness_scores
